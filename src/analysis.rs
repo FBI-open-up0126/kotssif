@@ -127,21 +127,9 @@ impl Info {
             let status = check_status(&board_copy, self.turn);
 
             match status {
-                GameStatus::Won => analysis.moves.push(Move {
-                    square: (c, r),
-                    analysis: Analysis::Win,
-                    chances: Chances::WIN,
-                }),
-                GameStatus::Drew => analysis.moves.push(Move {
-                    square: (c, r),
-                    analysis: Analysis::Draw,
-                    chances: Chances::DRAW,
-                }),
-                GameStatus::Lost => analysis.moves.push(Move {
-                    square: (c, r),
-                    analysis: Analysis::Lose,
-                    chances: Chances::LOSE,
-                }),
+                GameStatus::Won => analysis.moves.push(Move::winning_move((c, r))),
+                GameStatus::Drew => analysis.moves.push(Move::draw_move((c, r))),
+                GameStatus::Lost => analysis.moves.push(Move::losing_move((c, r))),
                 GameStatus::Ongoing => {
                     let next_move = Info {
                         turn: self.turn.switch(),
@@ -297,11 +285,42 @@ impl Chances {
     };
 }
 
+fn get_square_annotation(square: (usize, usize)) -> String {
+    let letter = ["A", "B", "C"];
+    format!("{}{}", letter[square.0], square.1 + 1)
+}
+
 #[derive(Debug)]
 pub struct Move {
     pub square: (usize, usize),
     pub analysis: Analysis,
     pub chances: Chances,
+}
+
+impl Move {
+    pub const fn winning_move(square: (usize, usize)) -> Self {
+        Move {
+            square,
+            analysis: Analysis::Win,
+            chances: Chances::WIN,
+        }
+    }
+
+    pub const fn draw_move(square: (usize, usize)) -> Self {
+        Move {
+            square,
+            analysis: Analysis::Draw,
+            chances: Chances::DRAW,
+        }
+    }
+
+    pub const fn losing_move(square: (usize, usize)) -> Self {
+        Move {
+            square,
+            analysis: Analysis::Lose,
+            chances: Chances::LOSE,
+        }
+    }
 }
 
 impl Serialize for Move {
@@ -311,11 +330,7 @@ impl Serialize for Move {
     {
         let mut state = serializer.serialize_struct("Move", 2)?;
 
-        let letter = ["A", "B", "C"];
-        state.serialize_field(
-            "square",
-            &format!("{}{}", letter[self.square.0], self.square.1 + 1),
-        )?;
+        state.serialize_field("square", &get_square_annotation(self.square))?;
         state.serialize_field("analysis", &self.analysis)?;
         state.serialize_field("chances", &self.chances)?;
 
